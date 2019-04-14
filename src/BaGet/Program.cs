@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using BaGet.Core.Mirror;
 using BaGet.Extensions;
 using McMaster.Extensions.CommandLineUtils;
@@ -7,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Hosting.WindowsServices;
 
 namespace BaGet
 {
@@ -39,7 +42,10 @@ namespace BaGet
 
             app.OnExecute(() =>
             {
-                CreateWebHostBuilder(args).Build().Run();
+                var pathToExe = Process.GetCurrentProcess().MainModule.FileName;
+                var pathToContentRoot = Path.GetDirectoryName(pathToExe);
+                Directory.SetCurrentDirectory(pathToContentRoot);
+                CreateWebHostBuilder(args).Build().RunAsService();
             });
 
             app.Execute(args);
@@ -54,6 +60,7 @@ namespace BaGet
                     // be enforced by a reverse proxy server, like IIS.
                     options.Limits.MaxRequestBodySize = null;
                 })
+                .UseUrls("http://0.0.0.0:10700")
                 .ConfigureAppConfiguration((builderContext, config) =>
                 {
                     var root = Environment.GetEnvironmentVariable("BAGET_CONFIG_ROOT");
